@@ -14,6 +14,17 @@ router.get('/', verifyToken, async (req, res) => {
     }
 });
 
+// Get Deadline Date (for regular users)
+router.get('/deadline', verifyToken, async (req, res) => {
+    try {
+        const deadlineString = await getDeadline();
+        res.json({ deadline: deadlineString });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Helper function to get deadline from database
 async function getDeadline() {
     try {
@@ -34,6 +45,11 @@ async function getDeadline() {
 
 // Update/Save List
 router.post('/', verifyToken, async (req, res) => {
+    // Prevent admins from saving lists
+    if (req.user.role === 'admin') {
+        return res.status(403).json({ message: 'Los administradores no pueden crear predicciones.' });
+    }
+
     const { names } = req.body; // Array of strings ["Name 1", "Name 2"]
 
     if (!Array.isArray(names) || names.length > 10) {

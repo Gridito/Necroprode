@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control - Necroprode</title>
+    <link rel="icon" type="image/jpeg" href="/images/favicon.jpg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -48,7 +49,10 @@
 
     <nav class="bg-surface border-b border-gray-800 p-4 mb-8">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-primary tracking-widest">NECROPRODE</h1>
+            <div class="flex items-center gap-3">
+                <img src="/images/favicon.jpg" alt="Necroprode Logo" class="w-8 h-8 rounded">
+                <h1 class="text-2xl font-bold text-primary tracking-widest">NECROPRODE</h1>
+            </div>
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <span id="usernameDisplay" class="text-gray-400"></span>
@@ -62,22 +66,83 @@
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 max-w-2xl">
-        <div class="bg-surface p-6 rounded-lg shadow-xl border border-gray-800">
-            <h2 class="text-xl font-semibold mb-2 text-white">Tu Lista de Predicciones</h2>
-            <p class="text-gray-400 mb-6 text-sm">Ingresa hasta 10 nombres. Puedes editar esta lista hasta la fecha límite.</p>
+    <div class="container mx-auto px-4 max-w-7xl">
+        <div class="grid lg:grid-cols-3 gap-4">
+            <!-- Left Column: Prediction List -->
+            <div class="lg:col-span-2">
+                <div class="bg-surface p-5 rounded-lg shadow-xl border border-gray-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">Tu Lista de Predicciones</h2>
+                            <p class="text-gray-400 text-xs mt-1">Ingresa hasta 10 nombres de celebridades</p>
+                        </div>
+                    </div>
 
-            <div id="alert" class="hidden mb-4 p-3 rounded text-sm"></div>
+                    <div id="alert" class="hidden mb-3 p-2 rounded text-xs"></div>
 
-            <form id="listForm" class="space-y-3">
-                <!-- Inputs will be generated here -->
-            </form>
+                    <form id="listForm" class="space-y-2.5 mb-4">
+                        <!-- Inputs will be generated here -->
+                    </form>
 
-            <div class="mt-6 flex justify-end">
-                <button id="saveBtn"
-                    class="bg-primary hover:bg-purple-700 text-dark font-bold py-2 px-6 rounded transition shadow-lg hover:shadow-purple-500/50">
-                    GUARDAR LISTA
-                </button>
+                    <div class="flex justify-end">
+                        <button id="saveBtn"
+                            class="bg-primary hover:bg-purple-700 text-dark font-bold py-2 px-6 rounded transition shadow-lg hover:shadow-purple-500/50 text-sm">
+                            GUARDAR LISTA
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Deadline and Rules -->
+            <div class="lg:col-span-1 space-y-4">
+                <!-- Deadline Card -->
+                <div class="bg-surface p-4 rounded-lg border border-gray-800">
+                    <h3 class="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Fecha Límite</h3>
+                    <div class="flex items-center gap-2">
+                        <div id="deadlineStatusIcon" class="text-xl">⏳</div>
+                        <p id="deadlineDisplay" class="text-base font-bold text-white">Cargando...</p>
+                    </div>
+                </div>
+
+                <!-- Rules Card -->
+                <div class="bg-surface p-4 rounded-lg border border-gray-800">
+                    <h3 class="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wider">Reglas del Juego</h3>
+                    <div class="space-y-1.5 text-xs">
+                        <div class="flex items-start gap-1.5">
+                            <span class="text-primary mt-0.5 text-xs">•</span>
+                            <p class="text-gray-300">Hasta <span class="text-primary font-bold">10 nombres</span></p>
+                        </div>
+                        <div class="flex items-start gap-1.5">
+                            <span class="text-primary mt-0.5 text-xs">•</span>
+                            <p class="text-gray-300">Editable hasta la fecha límite</p>
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-gray-700">
+                            <p class="text-gray-400 mb-1.5 text-xs font-semibold">Puntuación por edad:</p>
+                            <div class="space-y-0.5 text-xs text-gray-400">
+                                <div class="flex justify-between">
+                                    <span>≤ 20 años:</span>
+                                    <span class="text-primary font-bold">100 pts</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>21-40 años:</span>
+                                    <span class="text-primary font-bold">70 pts</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>41-60 años:</span>
+                                    <span class="text-primary font-bold">40 pts</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>61-80 años:</span>
+                                    <span class="text-primary font-bold">20 pts</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>> 80 años:</span>
+                                    <span class="text-primary font-bold">10 pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -106,6 +171,12 @@
                 }
                 const user = await res.json();
                 
+                // Check if user is admin and redirect (server-side verification is more reliable)
+                if (user.role === 'admin') {
+                    window.location.href = '/admin.html';
+                    return;
+                }
+                
                 // Update score display
                 const scoreDisplay = document.getElementById('scoreDisplay');
                 const scoreValue = document.getElementById('scoreValue');
@@ -118,21 +189,69 @@
             }
         }
 
+        // Fetch deadline date
+        async function fetchDeadline() {
+            try {
+                const res = await fetch('/api/list/deadline', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) {
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const data = await res.json();
+                
+                if (data.deadline) {
+                    const deadline = new Date(data.deadline);
+                    const now = new Date();
+                    const deadlineDisplay = document.getElementById('deadlineDisplay');
+                    const deadlineStatusIcon = document.getElementById('deadlineStatusIcon');
+                    
+                    // Format deadline date (more compact)
+                    const formattedDate = deadline.toLocaleString('es-ES', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    deadlineDisplay.textContent = formattedDate;
+                    
+                    // Update status icon and color
+                    if (now > deadline) {
+                        deadlineDisplay.classList.add('text-red-400');
+                        deadlineStatusIcon.textContent = '❌';
+                        deadlineStatusIcon.title = 'La fecha límite ya pasó';
+                    } else {
+                        deadlineDisplay.classList.add('text-green-400');
+                        deadlineStatusIcon.textContent = '✅';
+                        deadlineStatusIcon.title = 'Fecha límite activa';
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching deadline:', err);
+                document.getElementById('deadlineDisplay').textContent = 'Error al cargar';
+            }
+        }
+
         fetchUserInfo();
+        fetchDeadline();
 
         const form = document.getElementById('listForm');
         const alertBox = document.getElementById('alert');
         const saveBtn = document.getElementById('saveBtn');
 
-        // Generate 10 inputs
+        // Generate 10 inputs in grid layout
         for (let i = 0; i < 10; i++) {
             const div = document.createElement('div');
-            div.className = 'flex items-center gap-4';
+            div.className = 'flex items-center gap-2';
             const input = document.createElement('input');
             input.type = 'text';
             input.name = 'name';
-            input.className = 'input-dark flex-1 px-4 py-2 rounded';
-            input.placeholder = 'Ingresa un nombre...';
+            input.className = 'input-dark flex-1 px-3 py-2 rounded text-sm';
+            input.placeholder = `${i + 1}. Nombre...`;
             
             // Ocultar alert cuando el usuario empiece a escribir
             input.addEventListener('input', () => {
@@ -141,9 +260,6 @@
                 }
             });
             
-            div.innerHTML = `
-                <span class="text-gray-500 w-6 font-mono text-right">${i + 1}.</span>
-            `;
             div.appendChild(input);
             form.appendChild(div);
         }

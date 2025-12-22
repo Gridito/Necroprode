@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control - Necroprode</title>
+    <title>Panel de Administración - Necroprode</title>
+    <link rel="icon" type="image/jpeg" href="/images/favicon.jpg">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -38,7 +39,10 @@
 
     <nav class="bg-surface border-b border-gray-800 p-4 mb-8">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-primary tracking-widest">PANEL DE ADMINISTRACIÓN</h1>
+            <div class="flex items-center gap-3">
+                <img src="/images/favicon.jpg" alt="Necroprode Logo" class="w-8 h-8 rounded">
+                <h1 class="text-2xl font-bold text-primary tracking-widest">PANEL DE ADMINISTRACIÓN</h1>
+            </div>
             <button id="logoutBtn"
                 class="bg-red-900/50 hover:bg-red-900 text-red-200 px-3 py-1 rounded border border-red-800">Cerrar Sesión</button>
         </div>
@@ -159,6 +163,12 @@
 
         function renderUsers(users) {
             usersContainer.innerHTML = '';
+            
+            if (users.length === 0) {
+                usersContainer.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">No hay usuarios registrados aún.</div>';
+                return;
+            }
+            
             users.forEach(user => {
                 const card = document.createElement('div');
                 card.className = 'bg-surface p-4 rounded border border-gray-800 hover:border-gray-600 transition';

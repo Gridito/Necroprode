@@ -6,8 +6,7 @@ const { verifyAdmin } = require('../middleware/authMiddleware');
 // Get All Users and their Lists (for Admin Dashboard)
 router.get('/users', verifyAdmin, async (req, res) => {
     try {
-        // Get all users
-        const [users] = await db.query('SELECT id, username, total_score FROM users');
+        const [users] = await db.query('SELECT id, username, total_score, role FROM users WHERE role != ?', ['admin']);
 
         // Get all lists
         const [lists] = await db.query('SELECT * FROM lists');
