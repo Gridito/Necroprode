@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Necroprode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#121212',
+                        primary: '#bb86fc', // Purple akin to typical dark themes
+                        secondary: '#03dac6',
+                        surface: '#1e1e1e'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #121212; color: #e0e0e0; }
+    </style>
+</head>
+<body class="flex items-center justify-center h-screen">
+    <div class="text-center">
+        <h1 class="text-4xl font-bold mb-4 tracking-widest text-primary">NECROPRODE</h1>
+        <div class="animate-pulse text-gray-400">Cargando...</div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+
+        setTimeout(() => {
+            if (!token) {
+                window.location.href = '/login.html';
+            } else {
+                if (role === 'admin') {
+                    window.location.href = '/admin.html';
+                } else {
+                    window.location.href = '/dashboard.html';
+                }
+            }
+        }, 1000); // Small delay for effect
+    </script>
+</body>
+</html>

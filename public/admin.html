@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Necroprode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#121212',
+                        primary: '#bb86fc',
+                        secondary: '#03dac6',
+                        surface: '#1e1e1e'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .modal {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+
+<body class="bg-dark min-h-screen">
+
+    <nav class="bg-surface border-b border-gray-800 p-4 mb-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-primary tracking-widest">PANEL DE ADMINISTRACIÓN</h1>
+            <button id="logoutBtn"
+                class="bg-red-900/50 hover:bg-red-900 text-red-200 px-3 py-1 rounded border border-red-800">Cerrar Sesión</button>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4">
+        <!-- Deadline Configuration Section -->
+        <div class="bg-surface p-6 rounded-lg border border-gray-800 mb-8">
+            <h2 class="text-xl font-bold text-white mb-4">Configuración de Fecha Límite</h2>
+            <div class="flex items-end gap-4">
+                <div class="flex-1">
+                    <label class="block text-sm mb-2 text-gray-300">Fecha Límite</label>
+                    <input type="datetime-local" id="deadlineInput" 
+                        class="w-full bg-dark border border-gray-700 rounded px-3 py-2 text-white">
+                </div>
+                <div>
+                    <button id="saveDeadlineBtn"
+                        class="bg-primary text-dark font-bold px-6 py-2 rounded hover:bg-purple-700">
+                        Guardar Fecha
+                    </button>
+                </div>
+            </div>
+            <p id="deadlineStatus" class="text-sm text-gray-400 mt-2"></p>
+        </div>
+
+        <div id="usersContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- User Cards -->
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal fixed inset-0 flex items-center justify-center hidden z-50">
+        <div class="bg-surface p-6 rounded-lg shadow-xl w-full max-w-sm border border-gray-700">
+            <h3 class="text-xl font-bold mb-4 text-white">Actualizar Estado</h3>
+            <p id="modalName" class="text-secondary mb-4 font-mono"></p>
+
+            <div class="mb-4">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="isDeadInput" class="w-5 h-5 accent-primary">
+                    <span>¿Fallecido?</span>
+                </label>
+            </div>
+
+            <div id="ageContainer" class="mb-6 opacity-50 pointer-events-none transition">
+                <label class="block text-sm mb-1">Edad al fallecer</label>
+                <input type="number" id="ageInput" class="w-full bg-dark border border-gray-700 rounded px-3 py-2">
+            </div>
+
+            <div class="flex justify-end gap-3">
+                <button id="closeModal" class="text-gray-400 hover:text-white px-3 py-1">Cancelar</button>
+                <button id="saveScoreBtn"
+                    class="bg-primary text-dark font-bold px-4 py-2 rounded hover:bg-purple-700">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token || localStorage.getItem('role') !== 'admin') window.location.href = '/login.html';
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        });
+
+        const usersContainer = document.getElementById('usersContainer');
+        const editModal = document.getElementById('editModal');
+        const isDeadInput = document.getElementById('isDeadInput');
+        const ageContainer = document.getElementById('ageContainer');
+        const deadlineInput = document.getElementById('deadlineInput');
+        const deadlineStatus = document.getElementById('deadlineStatus');
+        let currentListItemId = null;
+
+        async function fetchDeadline() {
+            try {
+                const res = await fetch('/api/admin/deadline', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                
+                if (data.deadline) {
+                    // Convert ISO string to datetime-local format
+                    const deadlineDate = new Date(data.deadline);
+                    const localDateTime = new Date(deadlineDate.getTime() - deadlineDate.getTimezoneOffset() * 60000)
+                        .toISOString()
+                        .slice(0, 16);
+                    deadlineInput.value = localDateTime;
+                    
+                    // Update status
+                    const now = new Date();
+                    const deadline = new Date(data.deadline);
+                    if (now > deadline) {
+                        deadlineStatus.textContent = `⚠️ La fecha límite ya pasó (${deadline.toLocaleString('es-ES')})`;
+                        deadlineStatus.className = 'text-sm text-red-400 mt-2';
+                    } else {
+                        deadlineStatus.textContent = `✅ Fecha límite activa hasta ${deadline.toLocaleString('es-ES')}`;
+                        deadlineStatus.className = 'text-sm text-green-400 mt-2';
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching deadline:', err);
+                deadlineStatus.textContent = '❌ Error al cargar la fecha límite';
+                deadlineStatus.className = 'text-sm text-red-400 mt-2';
+            }
+        }
+
+        async function fetchUsers() {
+            try {
+                const res = await fetch('/api/admin/users', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const users = await res.json();
+                renderUsers(users);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderUsers(users) {
+            usersContainer.innerHTML = '';
+            users.forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'bg-surface p-4 rounded border border-gray-800 hover:border-gray-600 transition';
+
+                let listHtml = '<ul class="mt-3 space-y-2 text-sm">';
+                if (user.list && user.list.length > 0) {
+                    user.list.forEach(item => {
+                        const statusColor = item.is_dead ? 'text-red-400' : 'text-gray-400';
+                        const points = item.calculated_points ? `<span class="text-primary font-bold ml-2">+${item.calculated_points}</span>` : '';
+
+                        // Pass full object to handler
+                        const itemData = encodeURIComponent(JSON.stringify(item));
+
+                        listHtml += `
+                            <li class="flex justify-between items-center bg-dark p-2 rounded cursor-pointer hover:bg-gray-800" onclick="openModal('${itemData}')">
+                                <span class="${statusColor}">${item.name}</span>
+                                <div>
+                                    ${item.is_dead ? `<span class="text-xs text-gray-500 mr-2">Edad: ${item.age}</span>` : ''}
+                                    ${points}
+                                </div>
+                            </li>
+                        `;
+                    });
+                } else {
+                    listHtml += '<li class="text-gray-600 italic">Aún no hay predicciones</li>';
+                }
+                listHtml += '</ul>';
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-lg font-bold text-white">${user.username}</h3>
+                        <div class="bg-primary text-dark text-xs font-bold px-2 py-1 rounded">Puntuación: ${user.total_score || 0}</div>
+                    </div>
+                    ${listHtml}
+                `;
+                usersContainer.appendChild(card);
+            });
+        }
+
+        window.openModal = function (itemJson) {
+            const item = JSON.parse(decodeURIComponent(itemJson));
+            currentListItemId = item.id;
+
+            document.getElementById('modalName').textContent = item.name;
+            isDeadInput.checked = item.is_dead;
+            document.getElementById('ageInput').value = item.age || '';
+
+            toggleAgeInput();
+            editModal.classList.remove('hidden');
+        };
+
+        isDeadInput.addEventListener('change', toggleAgeInput);
+
+        function toggleAgeInput() {
+            if (isDeadInput.checked) {
+                ageContainer.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                ageContainer.classList.add('opacity-50', 'pointer-events-none');
+            }
+        }
+
+        document.getElementById('closeModal').addEventListener('click', () => {
+            editModal.classList.add('hidden');
+        });
+
+        document.getElementById('saveScoreBtn').addEventListener('click', async () => {
+            const isDead = isDeadInput.checked;
+            const age = isDead ? parseInt(document.getElementById('ageInput').value) : null;
+
+            try {
+                const res = await fetch('/api/admin/score', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ listId: currentListItemId, isDead, age })
+                });
+
+                if (res.ok) {
+                    editModal.classList.add('hidden');
+                    fetchUsers(); // Refresh data
+                } else {
+                    alert('Error al actualizar la puntuación');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        document.getElementById('saveDeadlineBtn').addEventListener('click', async () => {
+            const deadlineValue = deadlineInput.value;
+            
+            if (!deadlineValue) {
+                alert('Por favor, selecciona una fecha límite');
+                return;
+            }
+
+            // Convert datetime-local to ISO string
+            const deadline = new Date(deadlineValue);
+            const isoString = deadline.toISOString();
+
+            try {
+                const res = await fetch('/api/admin/deadline', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ deadline: isoString })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    deadlineStatus.textContent = `✅ Fecha límite actualizada: ${new Date(data.deadline).toLocaleString('es-ES')}`;
+                    deadlineStatus.className = 'text-sm text-green-400 mt-2';
+                } else {
+                    const error = await res.json();
+                    alert('Error al actualizar la fecha límite: ' + (error.message || 'Error desconocido'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error al actualizar la fecha límite');
+            }
+        });
+
+        fetchDeadline();
+        fetchUsers();
+    </script>
+</body>
+
+</html>

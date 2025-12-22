@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Necroprode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#121212',
+                        primary: '#bb86fc',
+                        secondary: '#03dac6',
+                        surface: '#1e1e1e',
+                        error: '#cf6679'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .input-dark {
+            background-color: #2c2c2c;
+            border: 1px solid #333;
+            color: white;
+            transition: all 0.2s;
+        }
+
+        .input-dark:focus {
+            border-color: #bb86fc;
+            outline: none;
+            box-shadow: 0 0 5px rgba(187, 134, 252, 0.5);
+        }
+    </style>
+</head>
+
+<body class="bg-dark min-h-screen">
+
+    <nav class="bg-surface border-b border-gray-800 p-4 mb-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-primary tracking-widest">NECROPRODE</h1>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <span id="usernameDisplay" class="text-gray-400"></span>
+                    <div id="scoreDisplay" class="bg-primary text-dark text-sm font-bold px-3 py-1 rounded hidden">
+                        Puntos: <span id="scoreValue">0</span>
+                    </div>
+                </div>
+                <button id="logoutBtn"
+                    class="bg-red-900/50 hover:bg-red-900 text-red-200 px-3 py-1 rounded transition border border-red-800">Cerrar Sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 max-w-2xl">
+        <div class="bg-surface p-6 rounded-lg shadow-xl border border-gray-800">
+            <h2 class="text-xl font-semibold mb-2 text-white">Tu Lista de Predicciones</h2>
+            <p class="text-gray-400 mb-6 text-sm">Ingresa hasta 10 nombres. Puedes editar esta lista hasta la fecha límite.</p>
+
+            <div id="alert" class="hidden mb-4 p-3 rounded text-sm"></div>
+
+            <form id="listForm" class="space-y-3">
+                <!-- Inputs will be generated here -->
+            </form>
+
+            <div class="mt-6 flex justify-end">
+                <button id="saveBtn"
+                    class="bg-primary hover:bg-purple-700 text-dark font-bold py-2 px-6 rounded transition shadow-lg hover:shadow-purple-500/50">
+                    GUARDAR LISTA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/login.html';
+
+        document.getElementById('usernameDisplay').textContent = localStorage.getItem('username') || 'Usuario';
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        });
+
+        // Fetch user info including score
+        async function fetchUserInfo() {
+            try {
+                const res = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) {
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const user = await res.json();
+                
+                // Update score display
+                const scoreDisplay = document.getElementById('scoreDisplay');
+                const scoreValue = document.getElementById('scoreValue');
+                if (user.total_score !== undefined && user.total_score !== null) {
+                    scoreValue.textContent = user.total_score;
+                    scoreDisplay.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Error fetching user info:', err);
+            }
+        }
+
+        fetchUserInfo();
+
+        const form = document.getElementById('listForm');
+        const alertBox = document.getElementById('alert');
+        const saveBtn = document.getElementById('saveBtn');
+
+        // Generate 10 inputs
+        for (let i = 0; i < 10; i++) {
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-4';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'name';
+            input.className = 'input-dark flex-1 px-4 py-2 rounded';
+            input.placeholder = 'Ingresa un nombre...';
+            
+            // Ocultar alert cuando el usuario empiece a escribir
+            input.addEventListener('input', () => {
+                if (!alertBox.classList.contains('hidden')) {
+                    alertBox.classList.add('hidden');
+                }
+            });
+            
+            div.innerHTML = `
+                <span class="text-gray-500 w-6 font-mono text-right">${i + 1}.</span>
+            `;
+            div.appendChild(input);
+            form.appendChild(div);
+        }
+
+        // Fetch existing list
+        async function fetchList() {
+            try {
+                const res = await fetch('/api/list', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) {
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const data = await res.json();
+
+                // Populate inputs
+                const inputs = form.querySelectorAll('input[name="name"]');
+                data.forEach((item, index) => {
+                    if (inputs[index]) inputs[index].value = item.name;
+                });
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        fetchList();
+
+        saveBtn.addEventListener('click', async () => {
+            const inputs = form.querySelectorAll('input[name="name"]');
+            const names = Array.from(inputs)
+                .map(input => input.value.trim())
+                .filter(name => name !== ''); // Send only non-empty names
+
+            try {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'GUARDANDO...';
+
+                const res = await fetch('/api/list', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ names })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showAlert('¡Lista guardada exitosamente!', 'success');
+                    // Refresh user info to update score if needed
+                    fetchUserInfo();
+                } else {
+                    showAlert(data.message || 'Error al guardar la lista', 'error');
+                }
+
+            } catch (err) {
+                showAlert('Ocurrió un error de red.', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'GUARDAR LISTA';
+            }
+        });
+
+        function showAlert(msg, type) {
+            alertBox.textContent = msg;
+            alertBox.classList.remove('hidden', 'bg-red-900/50', 'text-red-200', 'bg-green-900/50', 'text-green-200');
+            if (type === 'error') {
+                alertBox.classList.add('bg-red-900/50', 'text-red-200', 'border', 'border-red-800');
+            } else {
+                alertBox.classList.add('bg-green-900/50', 'text-green-200', 'border', 'border-green-800');
+            }
+            
+            // Ocultar automáticamente después de 5 segundos
+            setTimeout(() => {
+                alertBox.classList.add('hidden');
+            }, 5000);
+        }
+    </script>
+</body>
+
+</html>
