@@ -43,28 +43,21 @@ Database data is stored in the `mysql-data` Docker volume. This ensures data per
 3. **Seguro para producción**: El script usa `CREATE TABLE IF NOT EXISTS`, por lo que es seguro ejecutarlo múltiples veces sin afectar datos existentes.
 
 ## Cloud Deployment
+Para despliegue en la nube (AWS, Azure, GCP, DigitalOcean, etc.):
 
-📖 **Para una guía completa y detallada de despliegue en la nube, consulta [CLOUD_DEPLOY.md](./CLOUD_DEPLOY.md)**
+1. **Primera vez**: Las tablas se crearán automáticamente cuando la aplicación inicie
+2. **Reinicios**: Las tablas existentes no se modificarán, solo se verificarán
+3. **Migraciones**: Si necesitas agregar nuevas tablas en el futuro, actualiza `src/config/init-db.js`
 
-La guía incluye instrucciones paso a paso para:
-- ✅ DigitalOcean App Platform (más fácil)
-- ✅ DigitalOcean Droplet (VPS)
-- ✅ AWS EC2
-- ✅ Railway.app
-- ✅ Configuración de SSL/HTTPS
-- ✅ Troubleshooting común
-
-### Resumen Rápido:
+### Pasos para deploy:
 ```bash
-# 1. Configurar variables de entorno (.env)
-# 2. Construir y desplegar
+# 1. Configurar variables de entorno en tu plataforma
+# 2. Construir y desplegar con docker-compose o tu servicio de contenedores
 docker-compose up -d --build
 
 # 3. Crear usuario administrador
 docker-compose exec app npm run create-admin
 ```
-
-**Nota**: Las tablas se crearán automáticamente cuando la aplicación inicie.
 
 ## Troubleshooting
 - **Database Connection Error**: Ensure the `db` service is healthy before the `app` tries to connect. The app is configured to wait/retry, but initial startup might take a few seconds for MySQL to initialize.

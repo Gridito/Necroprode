@@ -217,24 +217,34 @@ certbot --nginx -d tu-dominio.com
 ### Paso 3: Agregar Base de Datos
 1. Click en "New" → "Database" → "MySQL"
 2. Railway creará automáticamente las variables de entorno
-3. **IMPORTANTE**: Railway usa estas variables automáticamente:
-   - `MYSQL_HOST`
-   - `MYSQL_PORT`
-   - `MYSQLUSER`
-   - `MYSQLPASSWORD`
-   - `MYSQLDATABASE`
-4. Estas variables se inyectan automáticamente en tu servicio web
 
-### Paso 4: Configurar Variables Adicionales
-1. Ve a tu servicio web → Variables
-2. Agrega estas variables manualmente:
-   ```
-   JWT_SECRET=<genera_un_secreto_con_openssl_rand_-base64_32>
-   DEADLINE_DATE=2025-12-31T23:59:59
-   PORT=3000
-   ```
-3. **No necesitas configurar variables de DB manualmente** - Railway las inyecta automáticamente
-4. Verifica que las variables de MySQL estén visibles en tu servicio web (deberían aparecer automáticamente)
+### Paso 4: Configurar Variables de Base de Datos
+
+**⚠️ IMPORTANTE**: En Railway, NO puedes usar `localhost` como `DB_HOST`. Debes usar el hostname del servicio MySQL.
+
+1. **Obtener el hostname del MySQL**:
+   - Ve a tu servicio **MySQL** → **Variables**
+   - Busca la variable `MYSQL_HOST` o `MYSQLHOST`
+   - **Copia ese valor** (será algo como `containers-us-west-xxx.railway.app` o similar)
+   - También anota: `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`
+
+2. **Configurar en el servicio web**:
+   - Ve a tu servicio **Necroprode (web)** → **Variables**
+   - Agrega estas variables:
+     ```
+     DB_HOST=<valor_de_MYSQL_HOST>  ⚠️ NO uses "localhost"!
+     DB_USER=<valor_de_MYSQLUSER>
+     DB_PASSWORD=<valor_de_MYSQLPASSWORD>
+     DB_NAME=<valor_de_MYSQLDATABASE>
+     DB_PORT=3306
+     JWT_SECRET=<genera_un_secreto>
+     DEADLINE_DATE=2025-12-31T23:59:59
+     PORT=3000
+     ```
+
+3. **Verificar**:
+   - Asegúrate de que `DB_HOST` NO sea `localhost`
+   - Debe ser el hostname completo del servicio MySQL
 
 ### Paso 5: Desplegar
 1. Railway detectará automáticamente el Dockerfile

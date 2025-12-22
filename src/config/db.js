@@ -1,77 +1,62 @@
 const mysql = require('mysql2');
 require('dotenv').config();
 
-// Support multiple cloud platforms' environment variable names
-// Railway, Render, Heroku, etc. use different variable names
-function getDbConfig() {
-    // Railway MySQL service variables (check this first as it's most specific)
-    if (process.env.MYSQL_HOST || process.env.MYSQLUSER) {
-        return {
-            host: process.env.MYSQL_HOST || process.env.MYSQLHOST,
-            port: parseInt(process.env.MYSQL_PORT || process.env.MYSQLPORT || '3306'),
-            user: process.env.MYSQLUSER || process.env.MYSQL_USER,
-            password: process.env.MYSQLPASSWORD || process.env.MYSQL_PASSWORD,
-            database: process.env.MYSQLDATABASE || process.env.MYSQL_DATABASE,
-        };
-    }
+const dbHost = process.env.DB_HOST || 'localhost';
+const dbUser = process.env.DB_USER;
+const dbPassword = process.env.DB_PASSWORD;
+const dbName = process.env.DB_NAME;
+const dbPort = parseInt(process.env.DB_PORT || '3306');
 
-    // Try DATABASE_URL (some platforms use this)
-    if (process.env.DATABASE_URL) {
-        try {
-            // Handle mysql://user:pass@host:port/db format
-            const url = process.env.DATABASE_URL.replace(/^mysql:\/\//, 'http://');
-            const parsed = new URL(url);
-            return {
-                host: parsed.hostname,
-                port: parseInt(parsed.port || '3306'),
-                user: parsed.username,
-                password: parsed.password,
-                database: parsed.pathname.slice(1), // Remove leading '/'
-            };
-        } catch (e) {
-            console.warn('⚠️ No se pudo parsear DATABASE_URL, usando variables estándar');
-        }
-    }
-
-    // Standard variables (docker-compose, local, etc.)
-    return {
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT || '3306'),
-        user: process.env.DB_USER || process.env.MYSQL_USER,
-        password: process.env.DB_PASSWORD || process.env.MYSQL_PASSWORD,
-        database: process.env.DB_NAME || process.env.MYSQL_DATABASE,
-    };
-}
-
-const dbConfig = getDbConfig();
-
-// Log configuration (without password) for debugging
+// Log configuration for debugging
 console.log('📊 Configuración de base de datos:', {
-    host: dbConfig.host || 'NO CONFIGURADO',
-    port: dbConfig.port || 'NO CONFIGURADO',
-    user: dbConfig.user || 'NO CONFIGURADO',
-    password: dbConfig.password ? '***' : 'NO CONFIGURADO',
-    database: dbConfig.database || 'NO CONFIGURADO',
+    host: dbHost,
+    port: dbPort,
+    user: dbUser || 'NO CONFIGURADO',
+    password: dbPassword ? '***' : 'NO CONFIGURADO',
+    database: dbName || 'NO CONFIGURADO',
 });
 
 // Validate required fields
-if (!dbConfig.host || !dbConfig.user || !dbConfig.password || !dbConfig.database) {
+if (!dbHost || !dbUser || !dbPassword || !dbName) {
     console.error('❌ Error: Faltan variables de entorno de base de datos');
-    console.error('Variables disponibles:', Object.keys(process.env).filter(k => 
-        k.includes('DB_') || k.includes('MYSQL') || k.includes('DATABASE')
-    ));
+    console.error('');
+    console.error('Variables requeridas:');
+    console.error('  - DB_HOST (actualmente:', dbHost, ')');
+    console.error('  - DB_USER (actualmente:', dbUser || 'NO CONFIGURADO', ')');
+    console.error('  - DB_PASSWORD (actualmente:', dbPassword ? '***' : 'NO CONFIGURADO', ')');
+    console.error('  - DB_NAME (actualmente:', dbName || 'NO CONFIGURADO', ')');
+    console.error('');
+    if (dbHost === 'localhost') {
+        console.error('⚠️  PROBLEMA DETECTADO: DB_HOST está configurado como "localhost"');
+        console.error('   En Railway, NO puedes usar "localhost" para conectarte a otro servicio.');
+        console.error('   Necesitas usar el hostname del servicio MySQL.');
+        console.error('');
+        console.error('   Para solucionarlo:');
+        console.error('   1. Ve a tu servicio MySQL en Railway → Variables');
+        console.error('   2. Busca "MYSQL_HOST" o "MYSQLHOST"');
+        console.error('   3. Copia ese valor');
+        console.error('   4. Ve a tu servicio web → Variables');
+        console.error('   5. Configura DB_HOST con ese valor (NO uses "localhost")');
+    }
     throw new Error('Variables de entorno de base de datos no configuradas correctamente');
 }
 
+// Warn if using localhost in what seems like a cloud environment
+if (dbHost === 'localhost' && process.env.RAILWAY_ENVIRONMENT) {
+    console.warn('⚠️  ADVERTENCIA: Estás usando "localhost" como DB_HOST en Railway.');
+    console.warn('   Esto NO funcionará. Necesitas usar el hostname del servicio MySQL.');
+}
+
 const pool = mysql.createPool({
-    ...dbConfig,
+    host: dbHost,
+    port: dbPort,
+    user: dbUser,
+    password: dbPassword,
+    database: dbName,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    // Add connection timeout and retry options
     connectTimeout: 10000,
-    acquireTimeout: 10000,
-    timeout: 10000,
 });
 
 module.exports = pool.promise();

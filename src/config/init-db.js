@@ -64,6 +64,19 @@ async function initializeDatabase(retries = 5, delay = 2000) {
                 }
             }
             console.error('❌ Error al inicializar la base de datos:', error.message);
+            
+            // Provide helpful error message on connection refused
+            if (error.code === 'ECONNREFUSED' && i === retries - 1) {
+                console.error('');
+                console.error('🔍 DIAGNÓSTICO:');
+                console.error('   El error ECONNREFUSED significa que no se puede conectar al host de la base de datos.');
+                console.error('   Verifica que:');
+                console.error('   1. DB_HOST tenga el hostname correcto del servicio MySQL (NO "localhost")');
+                console.error('   2. El servicio MySQL esté corriendo en Railway');
+                console.error('   3. Las variables DB_USER, DB_PASSWORD, DB_NAME estén correctas');
+                console.error('');
+            }
+            
             // On last retry, throw error to prevent server from starting
             if (i === retries - 1) {
                 throw new Error(`No se pudo conectar a la base de datos después de ${retries} intentos`);
