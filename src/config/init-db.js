@@ -52,6 +52,14 @@ async function initializeDatabase(retries = 5, delay = 2000) {
                 VALUES ('deadline_date', ?)
             `, [process.env.DEADLINE_DATE || '2025-12-31T23:59:59']);
 
+            // Insert default admin user if it doesn't exist
+            // Hash para contraseña 'admin123' generado con bcrypt (rounds: 10)
+            const adminHash = '$2b$10$xXAEOZaExVioqdcgmrUqdOpo6LAy2TNssh8UHykv.AqEG1M3IbCES';
+            await db.query(`
+                INSERT IGNORE INTO users (username, password_hash, role) 
+                VALUES ('admin', ?, 'admin')
+            `, [adminHash]);
+
             console.log('✅ Base de datos inicializada correctamente');
             return;
         } catch (error) {

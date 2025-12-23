@@ -51,10 +51,14 @@ Esta guía te ayudará a desplegar Necroprode en diferentes plataformas de cloud
 2. Espera a que se complete el despliegue (5-10 minutos)
 3. Tu app estará disponible en `https://tu-app.ondigitalocean.app`
 
-### Paso 5: Crear Usuario Administrador
-1. Ve a la consola de tu aplicación
-2. Ejecuta: `npm run create-admin`
-   - O manualmente: `node create-admin.js`
+### Paso 5: Usuario Administrador
+**El usuario administrador se crea automáticamente** cuando la base de datos se inicializa.
+
+**Credenciales por defecto**:
+- **Username**: `admin`
+- **Password**: `admin123`
+
+⚠️ **IMPORTANTE**: Cambia la contraseña después del primer inicio de sesión.
 
 ---
 
@@ -170,10 +174,14 @@ nginx -t
 systemctl restart nginx
 ```
 
-### Paso 9: Crear Usuario Administrador
-```bash
-docker-compose exec app npm run create-admin
-```
+### Paso 9: Usuario Administrador
+**El usuario administrador se crea automáticamente** cuando la base de datos se inicializa.
+
+**Credenciales por defecto**:
+- **Username**: `admin`
+- **Password**: `admin123`
+
+⚠️ **IMPORTANTE**: Cambia la contraseña después del primer inicio de sesión.
 
 ### Paso 10: Configurar SSL con Let's Encrypt (Opcional)
 ```bash
@@ -251,9 +259,108 @@ certbot --nginx -d tu-dominio.com
 2. El despliegue comenzará automáticamente
 3. Tu app estará en `https://tu-app.railway.app`
 
-### Paso 6: Crear Admin
-1. Ve a la consola del servicio
-2. Ejecuta: `npm run create-admin`
+### Paso 6: Usuario Administrador
+
+**El usuario administrador se crea automáticamente** cuando la base de datos se inicializa por primera vez.
+
+**Credenciales por defecto**:
+- **Username**: `admin`
+- **Password**: `admin123`
+
+⚠️ **IMPORTANTE**: Cambia la contraseña después del primer inicio de sesión.
+
+---
+
+### Opciones Alternativas (Si necesitas crear otro admin o cambiar credenciales)
+
+Si necesitas crear otro usuario admin o cambiar las credenciales, tienes estas opciones:
+
+#### Opción A: Registrarse como usuario normal y luego actualizar a admin
+
+Si prefieres **NO usar el script**, tienes estas opciones:
+
+#### Método 1: Registrarse como usuario normal y luego actualizar a admin
+
+1. **Regístrate desde la interfaz web**:
+   - Ve a tu aplicación en Railway: `https://tu-app.railway.app`
+   - Haz clic en "Registrarse" y crea una cuenta con el usuario y contraseña que quieras
+
+2. **Conectarte a MySQL en Railway y actualizar el role**:
+   
+   **Opción A: Usando Railway CLI**
+   ```bash
+   # Conecta tu proyecto
+   railway link
+   
+   # Conéctate a MySQL
+   railway connect mysql
+   ```
+   
+   Luego ejecuta este SQL:
+   ```sql
+   UPDATE users SET role = 'admin' WHERE username = 'tu_usuario';
+   ```
+   
+   **Opción B: Usando un cliente MySQL externo**
+   - Ve a Railway Dashboard → Tu servicio MySQL → Variables
+   - Anota: `MYSQLHOST`, `MYSQLUSER`, `MYSQLPASSWORD`, `MYSQLDATABASE`, `MYSQLPORT`
+   - Conéctate con un cliente MySQL (MySQL Workbench, DBeaver, etc.) usando esas credenciales
+   - Ejecuta: `UPDATE users SET role = 'admin' WHERE username = 'tu_usuario';`
+
+#### Método 2: Insertar directamente en MySQL (requiere generar hash)
+
+1. **Genera el hash de la contraseña**:
+   
+   Puedes usar un generador online de bcrypt:
+   - Ve a: https://bcrypt-generator.com/
+   - Ingresa tu contraseña (ej: `admin123`)
+   - Rounds: `10`
+   - Copia el hash generado (ej: `$2b$10$...`)
+
+   O genera el hash localmente con Node.js:
+   ```bash
+   node -e "const bcrypt = require('bcrypt'); bcrypt.hash('tu_contraseña', 10).then(hash => console.log(hash));"
+   ```
+
+2. **Conéctate a MySQL en Railway**:
+   
+   **Usando Railway CLI**:
+   ```bash
+   railway link
+   railway connect mysql
+   ```
+   
+   O usando un cliente MySQL externo con las credenciales de Railway.
+
+3. **Ejecuta este SQL** (reemplaza los valores):
+   ```sql
+   INSERT INTO users (username, password_hash, role) 
+   VALUES ('admin', '$2b$10$TU_HASH_AQUI', 'admin');
+   ```
+   
+   Ejemplo con contraseña `admin123`:
+   ```sql
+   INSERT INTO users (username, password_hash, role) 
+   VALUES ('admin', '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'admin');
+   ```
+
+#### Método 3: Usar la API de registro y luego actualizar
+
+1. **Regístrate usando la API**:
+   ```bash
+   curl -X POST https://tu-app.railway.app/api/auth/register \
+     -H "Content-Type: application/json" \
+     -d '{"username":"admin","password":"admin123"}'
+   ```
+
+2. **Actualiza el role a admin** (usando Método 1, paso 2):
+   ```sql
+   UPDATE users SET role = 'admin' WHERE username = 'admin';
+   ```
+
+---
+
+**Recomendación**: El Método 1 es el más simple y seguro, ya que usa el sistema de registro existente que ya hashea las contraseñas correctamente.
 
 ---
 
@@ -282,10 +389,12 @@ openssl rand -base64 32
    docker-compose exec db mysql -u root -p -e "SHOW TABLES;" necroprode
    ```
 
-3. **Crear usuario administrador**:
-   ```bash
-   docker-compose exec app npm run create-admin
-   ```
+3. **Usuario administrador**:
+   El usuario admin se crea automáticamente con:
+   - **Username**: `admin`
+   - **Password**: `admin123`
+   
+   ⚠️ **IMPORTANTE**: Cambia la contraseña después del primer inicio de sesión.
 
 4. **Probar login**:
    - Usa las credenciales del admin creado
