@@ -14,27 +14,20 @@
 ## Quick Start
 1.  Clone the repository.
 2.  Run `docker-compose up --build`.
-3.  Create an admin user by running `npm run create-admin` (or `node create-admin.js`).
-4.  Access the app at `http://localhost:3000`.
+3.  Access the app at `http://localhost:3000`.
 
-### Creating an Admin User
+### Admin User
 
-To create an admin user, you can:
+**El usuario administrador se crea automáticamente** cuando la base de datos se inicializa por primera vez.
 
-1. **Using npm script** (recommended):
-   ```bash
-   npm run create-admin
-   ```
+**Credenciales por defecto**:
+- **Username**: `admin`
+- **Password**: `admin123`
 
-2. **Directly with node**:
-   ```bash
-   node create-admin.js
-   ```
+⚠️ **IMPORTANTE**: Cambia la contraseña después del primer inicio de sesión por seguridad.
 
-By default, the script creates a user with:
-- **Username**: `admin` (or set `ADMIN_USERNAME` in `.env`)
-- **Password**: `admin123` (or set `ADMIN_PASSWORD` in `.env`)
-
-**Important**: Change the default password after first login!
+El usuario admin se crea automáticamente mediante:
+- `init.sql`: Se ejecuta cuando MySQL se inicia por primera vez
+- `src/config/init-db.js`: Se ejecuta cada vez que la aplicación inicia (como respaldo)
 
 See [DEPLOY.md](./DEPLOY.md) for detailed deployment instructions.

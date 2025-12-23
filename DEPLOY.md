@@ -32,15 +32,20 @@ The database will run on port `3306`.
 Database data is stored in the `mysql-data` Docker volume. This ensures data persists even if the containers are removed.
 
 ## Database Initialization
-**Las tablas se crean automáticamente** cuando la aplicación inicia. El sistema incluye:
+**Las tablas y el usuario admin se crean automáticamente** cuando la aplicación inicia. El sistema incluye:
 
 1. **Script de inicialización automática**: La aplicación verifica y crea todas las tablas necesarias (`users`, `lists`, `config`) al iniciar, incluso si el `init.sql` no se ejecutó.
 
 2. **Doble protección**:
    - `init.sql`: Se ejecuta cuando MySQL se inicia por primera vez (base de datos vacía)
-   - `src/config/init-db.js`: Se ejecuta cada vez que la aplicación inicia, asegurando que las tablas existan
+   - `src/config/init-db.js`: Se ejecuta cada vez que la aplicación inicia, asegurando que las tablas y el usuario admin existan
 
-3. **Seguro para producción**: El script usa `CREATE TABLE IF NOT EXISTS`, por lo que es seguro ejecutarlo múltiples veces sin afectar datos existentes.
+3. **Usuario admin automático**: Se crea automáticamente con:
+   - Username: `admin`
+   - Password: `admin123`
+   - Se usa `INSERT IGNORE` para evitar duplicados si ya existe
+
+4. **Seguro para producción**: El script usa `CREATE TABLE IF NOT EXISTS` e `INSERT IGNORE`, por lo que es seguro ejecutarlo múltiples veces sin afectar datos existentes.
 
 ## Cloud Deployment
 Para despliegue en la nube (AWS, Azure, GCP, DigitalOcean, etc.):
@@ -54,10 +59,13 @@ Para despliegue en la nube (AWS, Azure, GCP, DigitalOcean, etc.):
 # 1. Configurar variables de entorno en tu plataforma
 # 2. Construir y desplegar con docker-compose o tu servicio de contenedores
 docker-compose up -d --build
-
-# 3. Crear usuario administrador
-docker-compose exec app npm run create-admin
 ```
+
+**Nota**: El usuario administrador se crea automáticamente con las credenciales:
+- **Username**: `admin`
+- **Password**: `admin123`
+
+⚠️ **IMPORTANTE**: Cambia la contraseña después del primer inicio de sesión.
 
 ## Troubleshooting
 - **Database Connection Error**: Ensure the `db` service is healthy before the `app` tries to connect. The app is configured to wait/retry, but initial startup might take a few seconds for MySQL to initialize.
