@@ -62,33 +62,93 @@
         </div>
     </nav>
 
-    <div class="container mx-auto px-4 max-w-2xl">
-        <!-- Deadline Info Card -->
-        <div class="bg-surface p-4 rounded-lg border border-gray-800 mb-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm text-gray-400">Fecha Límite</p>
-                    <p id="deadlineDisplay" class="text-lg font-bold text-white">Cargando...</p>
+    <div class="container mx-auto px-4 max-w-6xl">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Columna Izquierda: Lista de Nombres -->
+            <div class="lg:col-span-2">
+                <div class="bg-surface p-6 rounded-lg shadow-xl border border-gray-800">
+                    <h2 class="text-xl font-semibold mb-2 text-white">Tu Lista de Predicciones</h2>
+                    <p class="text-gray-400 mb-6 text-sm">Ingresa hasta 10 nombres. Puedes editar esta lista hasta la fecha límite.</p>
+
+                    <div id="alert" class="hidden mb-4 p-3 rounded text-sm"></div>
+
+                    <form id="listForm" class="space-y-3">
+                        <!-- Inputs will be generated here -->
+                    </form>
+
+                    <div class="mt-6 flex justify-end">
+                        <button id="saveBtn"
+                            class="bg-primary hover:bg-purple-700 text-dark font-bold py-2 px-6 rounded transition shadow-lg hover:shadow-purple-500/50">
+                            GUARDAR LISTA
+                        </button>
+                    </div>
                 </div>
-                <div id="deadlineStatusIcon" class="text-2xl">⏳</div>
             </div>
-        </div>
 
-        <div class="bg-surface p-6 rounded-lg shadow-xl border border-gray-800">
-            <h2 class="text-xl font-semibold mb-2 text-white">Tu Lista de Predicciones</h2>
-            <p class="text-gray-400 mb-6 text-sm">Ingresa hasta 10 nombres. Puedes editar esta lista hasta la fecha límite.</p>
+            <!-- Columna Derecha: Reglas y Fecha Límite -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Fecha Límite Card -->
+                <div class="bg-surface p-4 rounded-lg border border-gray-800">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-white">Fecha Límite</h3>
+                        <div id="deadlineStatusIcon" class="text-2xl">⏳</div>
+                    </div>
+                    <p id="deadlineDisplay" class="text-lg font-bold text-white">Cargando...</p>
+                    <p class="text-xs text-gray-400 mt-2">Después de esta fecha no podrás modificar tu lista</p>
+                </div>
 
-            <div id="alert" class="hidden mb-4 p-3 rounded text-sm"></div>
-
-            <form id="listForm" class="space-y-3">
-                <!-- Inputs will be generated here -->
-            </form>
-
-            <div class="mt-6 flex justify-end">
-                <button id="saveBtn"
-                    class="bg-primary hover:bg-purple-700 text-dark font-bold py-2 px-6 rounded transition shadow-lg hover:shadow-purple-500/50">
-                    GUARDAR LISTA
-                </button>
+                <!-- Reglas de Juego Card -->
+                <div class="bg-surface p-4 rounded-lg border border-gray-800">
+                    <h3 class="text-lg font-semibold mb-4 text-white">Reglas de Juego</h3>
+                    <p class="text-sm text-gray-400 mb-4">Gana puntos cuando una persona de tu lista fallece. Los puntos dependen de la edad al momento de la muerte:</p>
+                    
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center bg-dark p-3 rounded border border-gray-700">
+                            <div>
+                                <span class="text-white font-medium">Edad ≤ 20 años</span>
+                            </div>
+                            <div class="bg-primary text-dark text-sm font-bold px-3 py-1 rounded">
+                                100 pts
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center bg-dark p-3 rounded border border-gray-700">
+                            <div>
+                                <span class="text-white font-medium">Edad ≤ 40 años</span>
+                            </div>
+                            <div class="bg-primary text-dark text-sm font-bold px-3 py-1 rounded">
+                                70 pts
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center bg-dark p-3 rounded border border-gray-700">
+                            <div>
+                                <span class="text-white font-medium">Edad ≤ 60 años</span>
+                            </div>
+                            <div class="bg-primary text-dark text-sm font-bold px-3 py-1 rounded">
+                                40 pts
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center bg-dark p-3 rounded border border-gray-700">
+                            <div>
+                                <span class="text-white font-medium">Edad ≤ 80 años</span>
+                            </div>
+                            <div class="bg-primary text-dark text-sm font-bold px-3 py-1 rounded">
+                                20 pts
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-center bg-dark p-3 rounded border border-gray-700">
+                            <div>
+                                <span class="text-white font-medium">Edad > 80 años</span>
+                            </div>
+                            <div class="bg-primary text-dark text-sm font-bold px-3 py-1 rounded">
+                                10 pts
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
