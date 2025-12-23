@@ -30,5 +30,8 @@ CREATE TABLE IF NOT EXISTS config (
 INSERT IGNORE INTO config (config_key, config_value) 
 VALUES ('deadline_date', '2025-12-31T23:59:59');
 
--- Optional: Insert a default admin user (Password: admin123 - needs to be hashed in real usage, utilizing placeholder for now or handle via code seed)
--- INSERT INTO users (username, password_hash, role) VALUES ('admin', '$2b$10$YourHashedPasswordHere', 'admin');
+-- Insert default admin user (Password: admin123)
+-- Hash generado con bcrypt (rounds: 10) para la contraseña 'admin123'
+-- IMPORTANTE: Cambia la contraseña después del primer inicio de sesión
+INSERT IGNORE INTO users (username, password_hash, role) 
+VALUES ('admin', '$2b$10$xXAEOZaExVioqdcgmrUqdOpo6LAy2TNssh8UHykv.AqEG1M3IbCES', 'admin');
