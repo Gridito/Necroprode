@@ -67,7 +67,7 @@ router.post('/', verifyToken, async (req, res) => {
     }
 
     if (now > deadline) {
-        return res.status(403).json({ message: 'Deadline has passed. List is locked.' });
+        return res.status(403).json({ message: 'Que pasó kukardo, se te acabó el tiempo?' });
     }
 
     const connection = await db.getConnection();
