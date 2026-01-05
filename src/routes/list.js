@@ -25,6 +25,57 @@ router.get('/deadline', verifyToken, async (req, res) => {
     }
 });
 
+// Get Leaderboard (available after deadline passes)
+router.get('/leaderboard', verifyToken, async (req, res) => {
+    try {
+        const deadlineString = await getDeadline();
+        const deadline = new Date(deadlineString);
+        const now = new Date();
+
+        // Solo permitir ver el leaderboard después del deadline
+        if (now <= deadline) {
+            return res.status(403).json({ 
+                message: 'El leaderboard estará disponible después de la fecha límite',
+                available: false 
+            });
+        }
+
+        // Obtener todos los usuarios excepto admin, ordenados por puntuación
+        const [users] = await db.query(`
+            SELECT id, username, total_score 
+            FROM users 
+            WHERE role != 'admin' 
+            ORDER BY total_score DESC, username ASC
+        `);
+
+        // Para cada usuario, obtener su lista de predicciones
+        const leaderboard = await Promise.all(users.map(async (user, index) => {
+            const [list] = await db.query(`
+                SELECT name, is_dead, age, calculated_points 
+                FROM lists 
+                WHERE user_id = ? 
+                ORDER BY calculated_points DESC, name ASC
+            `, [user.id]);
+
+            return {
+                rank: index + 1,
+                username: user.username,
+                total_score: user.total_score || 0,
+                predictions: list
+            };
+        }));
+
+        res.json({ 
+            available: true,
+            deadline: deadlineString,
+            leaderboard 
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Helper function to get deadline from database
 async function getDeadline() {
     try {

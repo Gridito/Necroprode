@@ -48,7 +48,13 @@
 
     <nav class="bg-surface border-b border-gray-800 p-4 mb-8">
         <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-primary tracking-widest">NECROPRODE</h1>
+            <div class="flex items-center gap-6">
+                <h1 class="text-2xl font-bold text-primary tracking-widest">NECROPRODE</h1>
+                <div id="navLinks" class="flex items-center gap-4">
+                    <span class="text-white font-medium">Mi Lista</span>
+                    <a id="leaderboardLink" href="/leaderboard.html" class="hidden text-gray-400 hover:text-secondary transition">Leaderboard</a>
+                </div>
+            </div>
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-3">
                     <span id="usernameDisplay" class="text-gray-400"></span>
@@ -66,9 +72,9 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Columna Izquierda: Lista de Nombres -->
             <div class="lg:col-span-2">
-                <div class="bg-surface p-6 rounded-lg shadow-xl border border-gray-800">
+                <div id="listCard" class="bg-surface p-6 rounded-lg shadow-xl border border-gray-800">
                     <h2 class="text-xl font-semibold mb-2 text-white">Tu Lista de Predicciones</h2>
-                    <p class="text-gray-400 mb-6 text-sm">Ingresa hasta 10 nombres. Puedes editar esta lista hasta la fecha límite.</p>
+                    <p id="listDescription" class="text-gray-400 mb-6 text-sm">Ingresa hasta 10 nombres. Puedes editar esta lista hasta la fecha límite.</p>
 
                     <div id="alert" class="hidden mb-4 p-3 rounded text-sm"></div>
 
@@ -76,7 +82,7 @@
                         <!-- Inputs will be generated here -->
                     </form>
 
-                    <div class="mt-6 flex justify-end">
+                    <div id="saveSection" class="mt-6 flex justify-end">
                         <button id="saveBtn"
                             class="bg-primary hover:bg-purple-700 text-dark font-bold py-2 px-6 rounded transition shadow-lg hover:shadow-purple-500/50">
                             GUARDAR LISTA
@@ -183,12 +189,10 @@
                     return;
                 }
                 
-                // Update score display
-                const scoreDisplay = document.getElementById('scoreDisplay');
+                // Guardar puntos pero no mostrar hasta después del deadline
                 const scoreValue = document.getElementById('scoreValue');
                 if (user.total_score !== undefined && user.total_score !== null) {
                     scoreValue.textContent = user.total_score;
-                    scoreDisplay.classList.remove('hidden');
                 }
             } catch (err) {
                 console.error('Error fetching user info:', err);
@@ -230,10 +234,18 @@
                         deadlineDisplay.classList.add('text-red-400');
                         deadlineStatusIcon.textContent = '❌';
                         deadlineStatusIcon.title = 'La fecha límite ya pasó';
+                        deadlinePassed = true;
+                        
+                        // Mostrar link al leaderboard, puntos y deshabilitar edición
+                        showLeaderboardLink();
+                        disableEditing();
+                        showScoreDisplay();
                     } else {
                         deadlineDisplay.classList.add('text-green-400');
                         deadlineStatusIcon.textContent = '✅';
                         deadlineStatusIcon.title = 'Fecha límite activa';
+                        // Ocultar puntos y link al leaderboard antes del deadline
+                        hideScoreDisplay();
                     }
                 }
             } catch (err) {
@@ -242,12 +254,44 @@
             }
         }
 
+        // Deshabilitar edición cuando pase el deadline
+        function disableEditing() {
+            const inputs = form.querySelectorAll('input[name="name"]');
+            inputs.forEach(input => {
+                input.disabled = true;
+                input.classList.add('opacity-60', 'cursor-not-allowed');
+            });
+            saveSection.classList.add('hidden');
+            listDescription.textContent = 'El tiempo para editar tu lista ha terminado. Aquí están tus predicciones:';
+        }
+
+        // Mostrar/ocultar puntos según el deadline
+        function showScoreDisplay() {
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            scoreDisplay.classList.remove('hidden');
+        }
+
+        function hideScoreDisplay() {
+            const scoreDisplay = document.getElementById('scoreDisplay');
+            scoreDisplay.classList.add('hidden');
+        }
+
+        // Mostrar link al leaderboard cuando pase el deadline
+        function showLeaderboardLink() {
+            const leaderboardLink = document.getElementById('leaderboardLink');
+            leaderboardLink.classList.remove('hidden');
+        }
+
+        let deadlinePassed = false;
+
         fetchUserInfo();
         fetchDeadline();
 
         const form = document.getElementById('listForm');
         const alertBox = document.getElementById('alert');
         const saveBtn = document.getElementById('saveBtn');
+        const saveSection = document.getElementById('saveSection');
+        const listDescription = document.getElementById('listDescription');
 
         // Generate 10 inputs
         for (let i = 0; i < 10; i++) {
