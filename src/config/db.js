@@ -1,4 +1,4 @@
-const mysql = require('mysql2');
+const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const dbHost = process.env.DB_HOST || 'localhost';
@@ -30,13 +30,6 @@ if (!dbHost || !dbUser || !dbPassword || !dbName) {
         console.error('⚠️  PROBLEMA DETECTADO: DB_HOST está configurado como "localhost"');
         console.error('   En Railway, NO puedes usar "localhost" para conectarte a otro servicio.');
         console.error('   Necesitas usar el hostname del servicio MySQL.');
-        console.error('');
-        console.error('   Para solucionarlo:');
-        console.error('   1. Ve a tu servicio MySQL en Railway → Variables');
-        console.error('   2. Busca "MYSQL_HOST" o "MYSQLHOST"');
-        console.error('   3. Copia ese valor');
-        console.error('   4. Ve a tu servicio web → Variables');
-        console.error('   5. Configura DB_HOST con ese valor (NO uses "localhost")');
     }
     throw new Error('Variables de entorno de base de datos no configuradas correctamente');
 }
@@ -47,7 +40,8 @@ if (dbHost === 'localhost' && process.env.RAILWAY_ENVIRONMENT) {
     console.warn('   Esto NO funcionará. Necesitas usar el hostname del servicio MySQL.');
 }
 
-const pool = mysql.createPool({
+// Configuración del pool con mejor manejo de reconexión
+const poolConfig = {
     host: dbHost,
     port: dbPort,
     user: dbUser,
@@ -56,7 +50,103 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    connectTimeout: 10000,
-});
+    connectTimeout: 30000,        // 30 segundos para conectar
+    enableKeepAlive: true,        // Mantener conexiones vivas
+    keepAliveInitialDelay: 10000, // Ping cada 10 segundos
+};
 
-module.exports = pool.promise();
+let pool = mysql.createPool(poolConfig);
+
+// Función para recrear el pool si es necesario
+function recreatePool() {
+    console.log('🔄 Recreando pool de conexiones...');
+    try {
+        pool.end().catch(() => {}); // Ignorar errores al cerrar
+    } catch (e) {
+        // Ignorar
+    }
+    pool = mysql.createPool(poolConfig);
+    console.log('✅ Pool de conexiones recreado');
+}
+
+// Wrapper para queries con reintentos automáticos
+async function queryWithRetry(sql, params, retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const result = await pool.query(sql, params);
+            return result;
+        } catch (error) {
+            const isConnectionError = 
+                error.code === 'ECONNREFUSED' || 
+                error.code === 'PROTOCOL_CONNECTION_LOST' ||
+                error.code === 'ECONNRESET' ||
+                error.code === 'ETIMEDOUT' ||
+                error.code === 'ENOTFOUND' ||
+                error.message.includes('connect ECONNREFUSED') ||
+                error.message.includes('Connection lost');
+
+            if (isConnectionError && attempt < retries) {
+                console.log(`⚠️ Error de conexión (intento ${attempt}/${retries}): ${error.code || error.message}`);
+                
+                // Esperar antes de reintentar (backoff exponencial)
+                const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+                console.log(`⏳ Esperando ${waitTime}ms antes de reintentar...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                
+                // Recrear el pool en el segundo intento
+                if (attempt === 2) {
+                    recreatePool();
+                }
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
+// Wrapper para getConnection con reintentos
+async function getConnectionWithRetry(retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            const connection = await pool.getConnection();
+            return connection;
+        } catch (error) {
+            const isConnectionError = 
+                error.code === 'ECONNREFUSED' || 
+                error.code === 'PROTOCOL_CONNECTION_LOST' ||
+                error.code === 'ECONNRESET' ||
+                error.code === 'ETIMEDOUT';
+
+            if (isConnectionError && attempt < retries) {
+                console.log(`⚠️ Error obteniendo conexión (intento ${attempt}/${retries}): ${error.code || error.message}`);
+                
+                const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+                console.log(`⏳ Esperando ${waitTime}ms antes de reintentar...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+                
+                if (attempt === 2) {
+                    recreatePool();
+                }
+            } else {
+                throw error;
+            }
+        }
+    }
+}
+
+// Exportar objeto con métodos mejorados
+module.exports = {
+    query: (sql, params) => queryWithRetry(sql, params),
+    getConnection: () => getConnectionWithRetry(),
+    // Acceso directo al pool por si se necesita
+    getPool: () => pool,
+    // Método para verificar conexión
+    ping: async () => {
+        try {
+            await pool.query('SELECT 1');
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+};

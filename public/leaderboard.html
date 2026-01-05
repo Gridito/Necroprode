@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - Necroprode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#121212',
+                        primary: '#bb86fc',
+                        secondary: '#03dac6',
+                        surface: '#1e1e1e',
+                        error: '#cf6679'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-dark min-h-screen">
+
+    <nav class="bg-surface border-b border-gray-800 p-4 mb-8">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-6">
+                <h1 class="text-2xl font-bold text-primary tracking-widest">NECROPRODE</h1>
+                <div class="flex items-center gap-4">
+                    <a href="/dashboard.html" class="text-gray-400 hover:text-white transition">Mi Lista</a>
+                    <a href="/leaderboard.html" class="text-secondary font-medium">Leaderboard</a>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <span id="usernameDisplay" class="text-gray-400"></span>
+                    <div id="scoreDisplay" class="bg-primary text-dark text-sm font-bold px-3 py-1 rounded">
+                        Puntos: <span id="scoreValue">0</span>
+                    </div>
+                </div>
+                <button id="logoutBtn"
+                    class="bg-red-900/50 hover:bg-red-900 text-red-200 px-3 py-1 rounded transition border border-red-800">Cerrar Sesión</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 max-w-4xl">
+        <!-- Loading state -->
+        <div id="loadingState" class="text-center py-12">
+            <div class="text-4xl mb-4">⏳</div>
+            <p class="text-gray-400">Cargando leaderboard...</p>
+        </div>
+
+        <!-- Not available state -->
+        <div id="notAvailableState" class="hidden">
+            <div class="bg-surface p-8 rounded-lg border border-gray-800 text-center">
+                <div class="text-6xl mb-4">🔒</div>
+                <h2 class="text-2xl font-bold text-white mb-2">Leaderboard no disponible</h2>
+                <p class="text-gray-400 mb-6">El leaderboard estará disponible después de la fecha límite.</p>
+                <a href="/dashboard.html" class="inline-block bg-primary hover:bg-purple-700 text-dark font-bold py-2 px-6 rounded transition">
+                    Volver a Mi Lista
+                </a>
+            </div>
+        </div>
+
+        <!-- Leaderboard content -->
+        <div id="leaderboardContent" class="hidden">
+            <div class="bg-surface p-6 rounded-lg shadow-xl border border-gray-800">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                        <span class="text-3xl">🏆</span> LEADERBOARD
+                    </h2>
+                </div>
+                
+                <div id="leaderboardTable" class="space-y-3">
+                    <!-- Leaderboard entries will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/login.html';
+
+        document.getElementById('usernameDisplay').textContent = localStorage.getItem('username') || 'Usuario';
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        });
+
+        // Verificar que no sea admin
+        async function checkUser() {
+            try {
+                const res = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401) {
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const user = await res.json();
+                
+                if (user.role === 'admin') {
+                    window.location.href = '/admin.html';
+                    return;
+                }
+
+                // Mostrar puntos
+                const scoreValue = document.getElementById('scoreValue');
+                if (user.total_score !== undefined) {
+                    scoreValue.textContent = user.total_score;
+                }
+            } catch (err) {
+                console.error('Error:', err);
+            }
+        }
+
+        // Fetch Leaderboard
+        async function fetchLeaderboard() {
+            try {
+                const res = await fetch('/api/list/leaderboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                document.getElementById('loadingState').classList.add('hidden');
+                
+                if (res.status === 403) {
+                    // Leaderboard no disponible aún
+                    document.getElementById('notAvailableState').classList.remove('hidden');
+                    return;
+                }
+                
+                if (res.status === 401) {
+                    localStorage.clear();
+                    window.location.href = '/login.html';
+                    return;
+                }
+                
+                const data = await res.json();
+                
+                if (data.available && data.leaderboard) {
+                    renderLeaderboard(data.leaderboard);
+                    document.getElementById('leaderboardContent').classList.remove('hidden');
+                } else {
+                    document.getElementById('notAvailableState').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error('Error fetching leaderboard:', err);
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('notAvailableState').classList.remove('hidden');
+            }
+        }
+
+        // Renderizar el leaderboard
+        function renderLeaderboard(leaderboard) {
+            const leaderboardTable = document.getElementById('leaderboardTable');
+            leaderboardTable.innerHTML = '';
+            
+            if (leaderboard.length === 0) {
+                leaderboardTable.innerHTML = '<p class="text-gray-400 text-center py-4">No hay participantes aún.</p>';
+                return;
+            }
+
+            const currentUsername = localStorage.getItem('username');
+
+            leaderboard.forEach((player, index) => {
+                const isCurrentUser = player.username === currentUsername;
+                const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${player.rank}`;
+                const rankClass = index < 3 ? 'text-2xl' : 'text-lg text-gray-400 font-mono';
+                
+                const card = document.createElement('div');
+                card.className = `bg-dark p-4 rounded-lg border ${isCurrentUser ? 'border-primary ring-1 ring-primary' : 'border-gray-700'} transition hover:border-gray-600`;
+                
+                // Generar lista de predicciones
+                let predictionsHtml = '';
+                if (player.predictions && player.predictions.length > 0) {
+                    predictionsHtml = '<div class="mt-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">';
+                    player.predictions.forEach(pred => {
+                        const statusClass = pred.is_dead ? 'text-red-400' : 'text-gray-500';
+                        const statusIcon = pred.is_dead ? '💀' : '•';
+                        const points = pred.calculated_points ? `<span class="text-primary text-xs font-bold">+${pred.calculated_points}</span>` : '';
+                        predictionsHtml += `
+                            <div class="flex items-center justify-between text-sm bg-surface px-2 py-1 rounded">
+                                <span class="${statusClass} truncate" title="${pred.name}">${statusIcon} ${pred.name}</span>
+                                ${points}
+                            </div>
+                        `;
+                    });
+                    predictionsHtml += '</div>';
+                } else {
+                    predictionsHtml = '<p class="text-gray-600 text-sm mt-2 italic">Sin predicciones</p>';
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="${rankClass}">${rankEmoji}</span>
+                            <div>
+                                <span class="font-bold ${isCurrentUser ? 'text-primary' : 'text-white'}">${player.username}</span>
+                                ${isCurrentUser ? '<span class="text-xs text-primary ml-2">(Tú)</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="bg-primary text-dark font-bold px-4 py-2 rounded text-lg">
+                            ${player.total_score} pts
+                        </div>
+                    </div>
+                    ${predictionsHtml}
+                `;
+                
+                leaderboardTable.appendChild(card);
+            });
+        }
+
+        checkUser();
+        fetchLeaderboard();
+    </script>
+</body>
+
+</html>
+
