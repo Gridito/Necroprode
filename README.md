@@ -30,4 +30,4 @@ El usuario admin se crea automáticamente mediante:
 - `init.sql`: Se ejecuta cuando MySQL se inicia por primera vez
 - `src/config/init-db.js`: Se ejecuta cada vez que la aplicación inicia (como respaldo)
 
-See [DEPLOY.md](./DEPLOY.md) for detailed deployment instructions.
+See [DEPLOY.md](./DEPLOY.md) for detailed deployment instructions
