@@ -31,10 +31,19 @@ async function initializeDatabase(retries = 5, delay = 2000) {
                     age INT DEFAULT NULL,
                     is_dead BOOLEAN DEFAULT FALSE,
                     calculated_points INT DEFAULT 0,
+                    bonus_points INT DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             `);
+
+            // Agregar columna bonus_points si no existe (para bases de datos existentes)
+            try {
+                await db.query(`ALTER TABLE lists ADD COLUMN bonus_points INT DEFAULT 0`);
+                console.log('✅ Columna bonus_points agregada');
+            } catch (e) {
+                // La columna ya existe, ignorar error
+            }
 
             // Create config table
             await db.query(`

@@ -29,20 +29,29 @@ router.get('/users', verifyAdmin, async (req, res) => {
 
 // Update Score (Set Age/Dead status)
 router.post('/score', verifyAdmin, async (req, res) => {
-    const { listId, age, isDead } = req.body;
+    const { listId, age, isDead, bonusPoints } = req.body;
 
     if (!listId || typeof isDead !== 'boolean') {
         return res.status(400).json({ message: 'Invalid data' });
     }
 
-    let points = 0;
-    if (isDead && age !== undefined) {
-        if (age <= 20) points = 100;
-        else if (age <= 40) points = 70;
-        else if (age <= 60) points = 40;
-        else if (age <= 80) points = 20;
-        else points = 10;
+    // Validar puntos extra (máximo 20)
+    let validBonusPoints = 0;
+    if (isDead && bonusPoints !== undefined && bonusPoints !== null) {
+        validBonusPoints = Math.min(Math.max(0, parseInt(bonusPoints) || 0), 20);
     }
+
+    let basePoints = 0;
+    if (isDead && age !== undefined) {
+        if (age <= 20) basePoints = 100;
+        else if (age <= 40) basePoints = 70;
+        else if (age <= 60) basePoints = 40;
+        else if (age <= 80) basePoints = 20;
+        else basePoints = 10;
+    }
+
+    // Puntos totales = puntos base + puntos bonus
+    const totalPoints = basePoints + validBonusPoints;
 
     const connection = await db.getConnection();
     try {
@@ -50,8 +59,8 @@ router.post('/score', verifyAdmin, async (req, res) => {
 
         // Update list item
         await connection.query(
-            'UPDATE lists SET age = ?, is_dead = ?, calculated_points = ? WHERE id = ?',
-            [age, isDead, points, listId]
+            'UPDATE lists SET age = ?, is_dead = ?, calculated_points = ?, bonus_points = ? WHERE id = ?',
+            [age, isDead, totalPoints, validBonusPoints, listId]
         );
 
         // Recalculate Total Score for the User
@@ -62,7 +71,7 @@ router.post('/score', verifyAdmin, async (req, res) => {
         }
         const userId = rows[0].user_id;
 
-        // 2. Sum points
+        // 2. Sum points (calculated_points ya incluye los bonus)
         const [sumRows] = await connection.query('SELECT SUM(calculated_points) as total FROM lists WHERE user_id = ?', [userId]);
         const totalScore = sumRows[0].total || 0;
 
@@ -70,7 +79,13 @@ router.post('/score', verifyAdmin, async (req, res) => {
         await connection.query('UPDATE users SET total_score = ? WHERE id = ?', [totalScore, userId]);
 
         await connection.commit();
-        res.json({ message: 'Score updated', points, totalScore });
+        res.json({ 
+            message: 'Score updated', 
+            basePoints, 
+            bonusPoints: validBonusPoints, 
+            totalPoints,
+            totalScore 
+        });
     } catch (error) {
         await connection.rollback();
         console.error(error);

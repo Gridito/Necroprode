@@ -51,7 +51,7 @@ router.get('/leaderboard', verifyToken, async (req, res) => {
         // Para cada usuario, obtener su lista de predicciones
         const leaderboard = await Promise.all(users.map(async (user, index) => {
             const [list] = await db.query(`
-                SELECT name, is_dead, age, calculated_points 
+                SELECT name, is_dead, age, calculated_points, bonus_points 
                 FROM lists 
                 WHERE user_id = ? 
                 ORDER BY calculated_points DESC, name ASC

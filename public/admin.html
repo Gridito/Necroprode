@@ -82,9 +82,18 @@
                 </label>
             </div>
 
-            <div id="ageContainer" class="mb-6 opacity-50 pointer-events-none transition">
-                <label class="block text-sm mb-1">Edad al fallecer</label>
-                <input type="number" id="ageInput" class="w-full bg-dark border border-gray-700 rounded px-3 py-2">
+            <div id="deathDetailsContainer" class="space-y-4 mb-6 opacity-50 pointer-events-none transition">
+                <div>
+                    <label class="block text-sm mb-1">Edad al fallecer</label>
+                    <input type="number" id="ageInput" class="w-full bg-dark border border-gray-700 rounded px-3 py-2">
+                </div>
+                
+                <div class="bg-dark p-3 rounded border border-orange-900/50">
+                    <label class="block text-sm mb-2 text-orange-400 font-medium">💀 Muerte Estrepitosa (Bonus)</label>
+                    <p class="text-xs text-gray-500 mb-2">Puntos extra por muerte impactante/dramática (máx. 20)</p>
+                    <input type="number" id="bonusInput" min="0" max="20" placeholder="0" 
+                        class="w-full bg-surface border border-gray-700 rounded px-3 py-2">
+                </div>
             </div>
 
             <div class="flex justify-end gap-3">
@@ -107,9 +116,10 @@
         const usersContainer = document.getElementById('usersContainer');
         const editModal = document.getElementById('editModal');
         const isDeadInput = document.getElementById('isDeadInput');
-        const ageContainer = document.getElementById('ageContainer');
+        const deathDetailsContainer = document.getElementById('deathDetailsContainer');
         const deadlineInput = document.getElementById('deadlineInput');
         const deadlineStatus = document.getElementById('deadlineStatus');
+        const bonusInput = document.getElementById('bonusInput');
         let currentListItemId = null;
 
         async function fetchDeadline() {
@@ -174,13 +184,14 @@
                     user.list.forEach(item => {
                         const statusColor = item.is_dead ? 'text-red-400' : 'text-gray-400';
                         const points = item.calculated_points ? `<span class="text-primary font-bold ml-2">+${item.calculated_points}</span>` : '';
+                        const bonusIndicator = item.bonus_points > 0 ? `<span class="text-orange-400 text-xs ml-1" title="Muerte estrepitosa">💀</span>` : '';
 
                         // Pass full object to handler
                         const itemData = encodeURIComponent(JSON.stringify(item));
 
                         listHtml += `
                             <li class="flex justify-between items-center bg-dark p-2 rounded cursor-pointer hover:bg-gray-800" onclick="openModal('${itemData}')">
-                                <span class="${statusColor}">${item.name}</span>
+                                <span class="${statusColor}">${item.name}${bonusIndicator}</span>
                                 <div>
                                     ${item.is_dead ? `<span class="text-xs text-gray-500 mr-2">Edad: ${item.age}</span>` : ''}
                                     ${points}
@@ -211,18 +222,19 @@
             document.getElementById('modalName').textContent = item.name;
             isDeadInput.checked = item.is_dead;
             document.getElementById('ageInput').value = item.age || '';
+            bonusInput.value = item.bonus_points || '';
 
-            toggleAgeInput();
+            toggleDeathDetails();
             editModal.classList.remove('hidden');
         };
 
-        isDeadInput.addEventListener('change', toggleAgeInput);
+        isDeadInput.addEventListener('change', toggleDeathDetails);
 
-        function toggleAgeInput() {
+        function toggleDeathDetails() {
             if (isDeadInput.checked) {
-                ageContainer.classList.remove('opacity-50', 'pointer-events-none');
+                deathDetailsContainer.classList.remove('opacity-50', 'pointer-events-none');
             } else {
-                ageContainer.classList.add('opacity-50', 'pointer-events-none');
+                deathDetailsContainer.classList.add('opacity-50', 'pointer-events-none');
             }
         }
 
@@ -233,6 +245,13 @@
         document.getElementById('saveScoreBtn').addEventListener('click', async () => {
             const isDead = isDeadInput.checked;
             const age = isDead ? parseInt(document.getElementById('ageInput').value) : null;
+            const bonusPoints = isDead ? parseInt(bonusInput.value) || 0 : 0;
+
+            // Validar bonus máximo
+            if (bonusPoints > 20) {
+                alert('Los puntos extra no pueden ser mayores a 20');
+                return;
+            }
 
             try {
                 const res = await fetch('/api/admin/score', {
@@ -241,7 +260,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    body: JSON.stringify({ listId: currentListItemId, isDead, age })
+                    body: JSON.stringify({ listId: currentListItemId, isDead, age, bonusPoints })
                 });
 
                 if (res.ok) {
